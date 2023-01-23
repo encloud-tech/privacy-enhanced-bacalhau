@@ -203,6 +203,11 @@ type Spec struct {
 	Language JobSpecLanguage `json:"Language,omitempty"`
 	Wasm     JobSpecWasm     `json:"Wasm,omitempty"`
 
+	TEE JobSpecTEE `json:"TEE,omitempty"`
+
+	// **** here we can add one extra type of JOB which is having specification for TEE based workload
+	// i.e. TEE JobSpecTEE 'json:"TEE, omitempty"
+
 	// the compute (cpu, ram) resources this job requires
 	Resources ResourceUsageConfig `json:"Resources,omitempty"`
 
@@ -252,6 +257,18 @@ type JobSpecDocker struct {
 	Image string `json:"Image,omitempty"`
 	// optionally override the default entrypoint
 	Entrypoint []string `json:"Entrypoint,omitempty"`
+	// a map of env to run the container with
+	EnvironmentVariables []string `json:"EnvironmentVariables,omitempty"`
+	// working directory inside the container
+	WorkingDirectory string `json:"WorkingDirectory,omitempty"`
+}
+
+type JobSpecTEE struct {
+	// implementation for TEE based job specification
+	// this should be pulled GCP cloud
+	ClICommandToExecute string `json:"RawCommnad,omitempty"`
+	// optionally override the default entrypoint
+	Input []string `json:"Entrypoint,omitempty"`
 	// a map of env to run the container with
 	EnvironmentVariables []string `json:"EnvironmentVariables,omitempty"`
 	// working directory inside the container
