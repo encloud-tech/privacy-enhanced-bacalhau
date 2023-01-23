@@ -10,7 +10,7 @@ type Engine int
 
 const (
 	engineUnknown Engine = iota // must be first
-	EngineCLI
+	EngineTEE
 	EngineNoop
 	EngineDocker
 	EngineWasm

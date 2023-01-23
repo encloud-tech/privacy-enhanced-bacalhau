@@ -9,7 +9,7 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[engineUnknown-0]
-	_ = x[EngineCLI-1]
+	_ = x[EngineTEE-1]
 	_ = x[EngineNoop-2]
 	_ = x[EngineDocker-3]
 	_ = x[EngineWasm-4]
@@ -18,7 +18,7 @@ func _() {
 	_ = x[engineDone-7]
 }
 
-const _Engine_name = "engineUnknownCLINoopDockerWasmLanguagePythonWasmengineDone"
+const _Engine_name = "engineUnknownTEENoopDockerWasmLanguagePythonWasmengineDone"
 
 var _Engine_index = [...]uint8{0, 13, 16, 20, 26, 30, 38, 48, 58}
 
