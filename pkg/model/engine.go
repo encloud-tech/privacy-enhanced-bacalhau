@@ -10,12 +10,14 @@ type Engine int
 
 const (
 	engineUnknown Engine = iota // must be first
+	EngineCLI
 	EngineNoop
 	EngineDocker
 	EngineWasm
 	EngineLanguage   // wraps python_wasm
 	EnginePythonWasm // wraps docker
 	engineDone       // must be last
+	// TEE engine needs to be added
 )
 
 func IsValidEngine(e Engine) bool {
