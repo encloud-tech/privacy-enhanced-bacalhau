@@ -126,9 +126,15 @@ func NewStandardExecutorProvider(
 		return nil, err
 	}
 
+	teeExecutor, err := wasm.NewExecutor(ctx, storageProvider)
+	if err != nil {
+		return nil, err
+	}
+
 	executors := executor.NewTypeExecutorProvider(map[model.Engine]executor.Executor{
 		model.EngineDocker: dockerExecutor,
 		model.EngineWasm:   wasmExecutor,
+		model.EngineTEE:    teeExecutor,
 	})
 
 	// language executors wrap other executors, so pass them a reference to all

@@ -30,7 +30,7 @@ func (e *Executor) RunShard(
 	}
 
 	//nolint:ineffassign,staticcheck
-	shard.Job.Spec.Engine = model.EngineCLI
+	shard.Job.Spec.Engine = model.EngineTEE
 
 	return &model.RunCommandResult{}, nil
 }
