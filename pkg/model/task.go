@@ -16,6 +16,7 @@ const (
 	TaskTypeDocker TaskType = "docker/run"
 	TaskTypeWasm   TaskType = "wasm32-wasi/run"
 	TaskTypeNoop   TaskType = "noop"
+	TaskTypeTEE    TaskType = "tee"
 )
 
 type Task struct {
@@ -70,6 +71,8 @@ func (task *Task) ToSpec() (*Spec, error) {
 		inputs, err = Reinterpret[DockerInputs](task.Inputs, BacalhauTaskSchema)
 	case TaskTypeWasm:
 		inputs, err = Reinterpret[WasmInputs](task.Inputs, BacalhauTaskSchema)
+	case TaskTypeTEE:
+		inputs, err = Reinterpret[TEEInputs](task.Inputs, BacalhauTaskSchema)
 	case TaskTypeNoop:
 		inputs = NoopTask{}
 	default:
