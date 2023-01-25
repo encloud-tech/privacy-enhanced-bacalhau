@@ -8,6 +8,7 @@ import (
 	"github.com/filecoin-project/bacalhau/pkg/executor/language"
 	noop_executor "github.com/filecoin-project/bacalhau/pkg/executor/noop"
 	pythonwasm "github.com/filecoin-project/bacalhau/pkg/executor/python_wasm"
+	"github.com/filecoin-project/bacalhau/pkg/executor/tee"
 	"github.com/filecoin-project/bacalhau/pkg/executor/wasm"
 	"github.com/filecoin-project/bacalhau/pkg/model"
 	"github.com/filecoin-project/bacalhau/pkg/storage"
@@ -126,7 +127,7 @@ func NewStandardExecutorProvider(
 		return nil, err
 	}
 
-	teeExecutor, err := wasm.NewExecutor(ctx, storageProvider)
+	teeExecutor, err := tee.NewExecutor(ctx, storageProvider)
 	if err != nil {
 		return nil, err
 	}
