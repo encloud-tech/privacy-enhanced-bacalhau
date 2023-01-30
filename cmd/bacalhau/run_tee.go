@@ -1,12 +1,18 @@
 package bacalhau
 
 import (
+	"fmt"
+
+	"github.com/filecoin-project/bacalhau/pkg/bacerrors"
 	"github.com/filecoin-project/bacalhau/pkg/downloader/util"
+	jobutils "github.com/filecoin-project/bacalhau/pkg/job"
 	"github.com/filecoin-project/bacalhau/pkg/model"
+	"github.com/filecoin-project/bacalhau/pkg/system"
 	"github.com/filecoin-project/bacalhau/pkg/util/templates"
 	"github.com/filecoin-project/bacalhau/pkg/version"
 	"github.com/spf13/cobra"
 	"k8s.io/kubectl/pkg/util/i18n"
+	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -128,4 +134,51 @@ func newTEERunCmd() *cobra.Command {
 		},
 	}
 	return TEERunCmd
+}
+
+func teeRun(cmd *cobra.Command, cmdArgs []string, v1 *TEERunOptions) error {
+	cm := system.NewCleanupManager()
+	defer cm.Cleanup()
+	ctx := cmd.Context()
+
+	ctx, rootSpan := system.NewRootSpan(ctx, system.GetTracer(), "cmd/bacalhau/dockerRun")
+	defer rootSpan.End()
+	cm.RegisterCallback(system.CleanupTraceProvider)
+
+	j, err := createTEEJob(ctx, cmdArgs, v1)
+	if err != nil {
+		Fatal(cmd, fmt.Sprintf("Error creating job: %s", err), 1)
+		return nil
+	}
+
+	err = jobutils.VerifyJob(ctx, j)
+	if err != nil {
+		if _, ok := err.(*bacerrors.ImageNotFound); ok {
+			Fatal(cmd, fmt.Sprintf("Error to be logged out"), 1)
+			return nil
+		} else {
+			Fatal(cmd, fmt.Sprintf("Error verifying job: %s", err), 1)
+			return nil
+		}
+	}
+
+	if v1.DryRun {
+		// Converting job to yaml
+		var yamlBytes []byte
+		yamlBytes, err = yaml.Marshal(j)
+		if err != nil {
+			Fatal(cmd, fmt.Sprintf("Error converting job to yaml: %s", err), 1)
+			return nil
+		}
+		cmd.Print(string(yamlBytes))
+		return nil
+	}
+
+	return ExecuteJob(ctx,
+		cm,
+		cmd,
+		j,
+		v1.RunTimeSettings,
+		v1.DownloadFlags,
+	)
 }
