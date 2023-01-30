@@ -1,15 +1,18 @@
 package bacalhau
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	"github.com/filecoin-project/bacalhau/pkg/bacerrors"
-	"github.com/filecoin-project/bacalhau/pkg/downloader/util"
+	"github.com/filecoin-project/bacalhau/pkg/ipfs"
 	jobutils "github.com/filecoin-project/bacalhau/pkg/job"
 	"github.com/filecoin-project/bacalhau/pkg/model"
 	"github.com/filecoin-project/bacalhau/pkg/system"
 	"github.com/filecoin-project/bacalhau/pkg/util/templates"
 	"github.com/filecoin-project/bacalhau/pkg/version"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/kubectl/pkg/util/i18n"
 	"sigs.k8s.io/yaml"
@@ -43,11 +46,8 @@ type TEERunOptions struct {
 	CPU              string
 	Memory           string
 	GPU              string
-	Networking       model.Network
-	NetworkDomains   []string
 	WorkingDirectory string   // Working directory for docker
 	Labels           []string // Labels for the job on the Bacalhau network (for searching)
-	NodeSelector     string   // Selector (label query) to filter nodes on which this job can be executed
 
 	Image      string   // Image to execute
 	Entrypoint []string // Entrypoint to the docker image
@@ -58,7 +58,7 @@ type TEERunOptions struct {
 
 	RunTimeSettings RunTimeSettings // Settings for running the job
 
-	DownloadFlags model.DownloaderSettings // Settings for running Download
+	DownloadFlags ipfs.IPFSDownloadSettings // Settings for running Download
 
 	ShardingGlobPattern string
 	ShardingBasePath    string
@@ -84,13 +84,10 @@ func NewTEERunOptions() *TEERunOptions {
 		CPU:                "",
 		Memory:             "",
 		GPU:                "",
-		Networking:         model.NetworkNone,
-		NetworkDomains:     []string{},
 		SkipSyntaxChecking: false,
 		WorkingDirectory:   "",
 		Labels:             []string{},
-		NodeSelector:       "",
-		DownloadFlags:      *util.NewDownloadSettings(),
+		DownloadFlags:      *ipfs.NewIPFSDownloadSettings(),
 		RunTimeSettings:    *NewRunTimeSettings(),
 
 		ShardingGlobPattern: "",
@@ -180,5 +177,94 @@ func teeRun(cmd *cobra.Command, cmdArgs []string, v1 *TEERunOptions) error {
 		j,
 		v1.RunTimeSettings,
 		v1.DownloadFlags,
+		nil,
 	)
+}
+
+func createTEEJob(ctx context.Context,
+	cmdArgs []string,
+	v1 *TEERunOptions) (*model.Job, error) {
+
+	//nolint:ineffassign,staticcheck
+	_, span := system.GetTracer().Start(ctx, "cmd/bacalhau/dockerRun.ProcessAndExecuteJob")
+	defer span.End()
+
+	//Specifying the Entrypoint(TODO):
+
+	swarmAddresses := v1.DownloadFlags.IPFSSwarmAddrs
+
+	if swarmAddresses == "" {
+		swarmAddresses = strings.Join(system.Envs[system.Production].IPFSSwarmAddresses, ",")
+	}
+
+	v1.DownloadFlags = ipfs.IPFSDownloadSettings{
+		TimeoutSecs:    v1.DownloadFlags.TimeoutSecs,
+		OutputDir:      v1.DownloadFlags.OutputDir,
+		IPFSSwarmAddrs: swarmAddresses,
+	}
+
+	engineType, err := model.ParseEngine(v1.Engine)
+	if err != nil {
+		return &model.Job{}, err
+	}
+
+	verifierType, err := model.ParseVerifier(v1.Verifier)
+	if err != nil {
+		return &model.Job{}, err
+	}
+
+	publisherType, err := model.ParsePublisher(v1.Publisher)
+	if err != nil {
+		return &model.Job{}, err
+	}
+
+	// for _, i := range v1.Inputs {
+	//  v1.InputVolumes = append(v1.InputVolumes, v1.Sprintf("%s:/inputs", i))
+	// }
+
+	if len(v1.WorkingDirectory) > 0 {
+		err = system.ValidateWorkingDir(v1.WorkingDirectory)
+
+		if err != nil {
+			return &model.Job{}, errors.Wrap(err, "CreateJobSpecAndDeal:")
+		}
+	}
+
+	labels := v1.Labels
+
+	if v1.FilPlus {
+		labels = append(labels, "filplus")
+	}
+
+	j, err := jobutils.ConstructDockerJob(
+		model.APIVersionLatest(),
+		engineType,
+		verifierType,
+		publisherType,
+		v1.CPU,
+		v1.Memory,
+		v1.GPU,
+		v1.InputUrls,
+		v1.InputVolumes,
+		v1.OutputVolumes,
+		v1.Env,
+		v1.Entrypoint,
+		v1.Image,
+		v1.Concurrency,
+		v1.Confidence,
+		v1.MinBids,
+		v1.Timeout,
+		labels,
+		v1.WorkingDirectory,
+		v1.ShardingGlobPattern,
+		v1.ShardingBasePath,
+		v1.ShardingBatchSize,
+		doNotTrack,
+	)
+	if err != nil {
+		return &model.Job{}, errors.Wrap(err, "CreateJobSpecAndDeal")
+	}
+
+	return j, nil
+
 }
