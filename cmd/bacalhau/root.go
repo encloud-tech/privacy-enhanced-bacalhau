@@ -56,6 +56,9 @@ func NewRootCmd() *cobra.Command {
 	RootCmd.AddCommand(newDockerCmd())
 	RootCmd.AddCommand(newWasmCmd())
 
+	//Plumbing Command for TEE based Executor
+	RootCmd.AddCommand(newTEECmd())
+
 	// Porcelain commands (language specific easy to use commands)
 	RootCmd.AddCommand(newRunCmd())
 
