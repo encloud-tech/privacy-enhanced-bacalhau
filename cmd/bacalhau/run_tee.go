@@ -20,7 +20,7 @@ import (
 
 var (
 	teeRunLong = templates.LongDesc(i18n.T(`
-		Runs a job using the Docker executor on the node.
+		Runs a Job using a TEE Based Executor on the Node
 		`))
 
 	//nolint:lll // Documentation
@@ -31,6 +31,7 @@ var (
 
 type TEERunOptions struct {
 	Engine           string   // Executor - executor.Executor
+	DeploymentType   string   //Type-Constellation/Anjuna
 	Verifier         string   // Verifier - verifier.Verifier
 	Publisher        string   // Publisher - publisher.Publisher
 	Inputs           []string // Array of input CIDs
@@ -69,7 +70,7 @@ type TEERunOptions struct {
 
 func NewTEERunOptions() *TEERunOptions {
 	return &TEERunOptions{
-		Engine:             "EngineTEE",
+		Engine:             "TEE",
 		Verifier:           "noop",
 		Publisher:          "estuary",
 		Inputs:             []string{},
@@ -130,6 +131,16 @@ func newTEERunCmd() *cobra.Command {
 			return teeRun(cmd, cmdArgs, v1)
 		},
 	}
+	TEERunCmd.PersistentFlags().StringVar(
+		&v1.DeploymentType, "DeploymentType", v1.DeploymentType,
+		`What TEE Framework to use(Anjuna/Constellation)`,
+	)
+
+	TEERunCmd.PersistentFlags().StringSliceVarP(
+		&v1.Inputs, "inputs", "i", v1.Inputs,
+		`CIDs to use on the job. Mounts them at '/inputs' in the execution.`,
+	)
+
 	return TEERunCmd
 }
 
@@ -236,14 +247,12 @@ func createTEEJob(ctx context.Context,
 		labels = append(labels, "filplus")
 	}
 
-	j, err := jobutils.ConstructDockerJob(
+	j, err := jobutils.ConstructTEEJob(
 		model.APIVersionLatest(),
 		engineType,
 		verifierType,
 		publisherType,
-		v1.CPU,
-		v1.Memory,
-		v1.GPU,
+		v1.CPU, v1.CPU, v1.GPU,
 		v1.InputUrls,
 		v1.InputVolumes,
 		v1.OutputVolumes,
