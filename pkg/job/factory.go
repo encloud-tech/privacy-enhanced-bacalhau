@@ -153,6 +153,117 @@ func ConstructDockerJob( //nolint:funlen
 	return j, nil
 }
 
+func ConstructTEEJob( //nolint:funlen
+	a model.APIVersion,
+	e model.Engine,
+	v model.Verifier,
+	p model.Publisher,
+	cpu, memory, gpu string,
+	inputUrls []string,
+	inputVolumes []string,
+	outputVolumes []string,
+	env []string,
+	entrypoint []string,
+	image string,
+	concurrency int,
+	confidence int,
+	minBids int,
+	timeout float64,
+	annotations []string,
+	workingDir string,
+	shardingGlobPattern string,
+	shardingBasePath string,
+	shardingBatchSize int,
+	doNotTrack bool,
+) (*model.Job, error) {
+	jobResources := model.ResourceUsageConfig{
+		CPU:    cpu,
+		Memory: memory,
+		GPU:    gpu,
+	}
+	jobContexts := []model.StorageSpec{}
+
+	jobInputs, err := buildJobInputs(inputVolumes, inputUrls)
+	if err != nil {
+		return &model.Job{}, err
+	}
+	jobOutputs, err := buildJobOutputs(outputVolumes)
+	if err != nil {
+		return &model.Job{}, err
+	}
+
+	var jobAnnotations []string
+	var unSafeAnnotations []string
+	for _, a := range annotations {
+		if IsSafeAnnotation(a) && a != "" {
+			jobAnnotations = append(jobAnnotations, a)
+		} else {
+			unSafeAnnotations = append(unSafeAnnotations, a)
+		}
+	}
+
+	if len(unSafeAnnotations) > 0 {
+		log.Error().Msgf("The following labels are unsafe. Labels must fit the regex '/%s/' (and all emjois): %+v",
+			RegexString,
+			strings.Join(unSafeAnnotations, ", "))
+	}
+
+	if len(workingDir) > 0 {
+		err = system.ValidateWorkingDir(workingDir)
+		if err != nil {
+			log.Error().Msg(err.Error())
+			return &model.Job{}, err
+		}
+	}
+
+	// Weird bug that sharding basepath fails if has a trailing slash
+	shardingBasePath = strings.TrimSuffix(shardingBasePath, "/")
+
+	jobShardingConfig := model.JobShardingConfig{
+		GlobPattern: shardingGlobPattern,
+		BasePath:    shardingBasePath,
+		BatchSize:   shardingBatchSize,
+	}
+
+	j, err := model.NewJobWithSaneProductionDefaults()
+	if err != nil {
+		return &model.Job{}, err
+	}
+	j.APIVersion = a.String()
+
+	j.Spec = model.Spec{
+		Engine:    e,
+		Verifier:  v,
+		Publisher: p,
+		TEE: model.JobSpecTEE{
+			ClICommandToExecute:  image,
+			Input:                entrypoint,
+			EnvironmentVariables: env,
+		},
+		Timeout:     timeout,
+		Resources:   jobResources,
+		Inputs:      jobInputs,
+		Contexts:    jobContexts,
+		Outputs:     jobOutputs,
+		Annotations: jobAnnotations,
+		Sharding:    jobShardingConfig,
+		DoNotTrack:  doNotTrack,
+	}
+
+	// override working dir if provided
+	if len(workingDir) > 0 {
+		j.Spec.Docker.WorkingDirectory = workingDir
+	}
+
+	j.Spec.Deal = model.Deal{
+		Concurrency: concurrency,
+		Confidence:  confidence,
+		MinBids:     minBids,
+	}
+
+	return j, nil
+}
+
 func ConstructLanguageJob(
 	inputVolumes []string,
 	inputUrls []string,
