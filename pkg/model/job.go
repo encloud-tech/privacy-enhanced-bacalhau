@@ -266,7 +266,7 @@ type JobSpecDocker struct {
 type JobSpecTEE struct {
 	// implementation for TEE based job specification
 	// this should be pulled GCP cloud
-	ClICommandToExecute string `json:"RawCommnad,omitempty"`
+	DiskImageAddress string `json:"RawCommnad,omitempty"`
 	// optionally override the default entrypoint
 	Input []string `json:"Entrypoint,omitempty"`
 	// a map of env to run the container with

@@ -7,8 +7,8 @@ import (
 )
 
 type TEEInputs struct {
-	CliCommnadToExecute string
-	Outputs             IPLDMap[string, datamodel.Node]
+	DiskImageAddress string
+	Outputs          IPLDMap[string, datamodel.Node]
 }
 
 var _ JobType = (*TEEInputs)(nil)
@@ -16,7 +16,7 @@ var _ JobType = (*TEEInputs)(nil)
 func (tee TEEInputs) UnmarshalInto(with string, spec *Spec) error {
 	spec.Engine = EngineTEE
 	spec.TEE = JobSpecTEE{
-		ClICommandToExecute: tee.CliCommnadToExecute,
+		DiskImageAddress: tee.DiskImageAddress,
 	}
 
 	spec.Outputs = []StorageSpec{}

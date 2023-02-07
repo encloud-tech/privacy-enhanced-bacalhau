@@ -3,6 +3,7 @@ package tee
 import (
 	"context"
 	"fmt"
+	"os/exec"
 
 	"github.com/filecoin-project/bacalhau/pkg/executor"
 	"github.com/filecoin-project/bacalhau/pkg/model"
@@ -21,9 +22,9 @@ func (e *Executor) RunShard(
 	jobResultsDir string,
 ) (*model.RunCommandResult, error) {
 
-	if shard.Job.Spec.TEE.ClICommandToExecute != "" {
+	if shard.Job.Spec.TEE.DiskImageAddress != "" {
 
-		fmt.Println(shard.Job.Spec.TEE.ClICommandToExecute)
+		fmt.Println(shard.Job.Spec.TEE.DiskImageAddress)
 	}
 
 	//nolint:ineffassign,staticcheck
@@ -49,11 +50,13 @@ func NewExecutor(
 
 // IsInstalled checks if tee cli tool itself is installed.
 func (e *Executor) IsInstalled(ctx context.Context) (bool, error) {
-	teeExecutor, err := e.executors.GetExecutor(ctx, model.EngineTEE)
+	_, err := exec.LookPath("gcloud")
 	if err != nil {
-		return false, err
+		return false, nil
 	}
-	return teeExecutor.IsInstalled(ctx)
+
+	return true, nil
+
 }
 
 func (e *Executor) HasStorageLocally(context.Context, model.StorageSpec) (bool, error) {
