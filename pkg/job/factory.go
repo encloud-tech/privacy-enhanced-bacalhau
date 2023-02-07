@@ -236,7 +236,7 @@ func ConstructTEEJob( //nolint:funlen
 		Verifier:  v,
 		Publisher: p,
 		TEE: model.JobSpecTEE{
-			ClICommandToExecute:  image,
+			DiskImageAddress:     image,
 			Input:                entrypoint,
 			EnvironmentVariables: env,
 		},
