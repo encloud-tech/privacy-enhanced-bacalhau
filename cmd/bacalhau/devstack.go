@@ -119,6 +119,9 @@ func runDevstack(cmd *cobra.Command, ODs *devstack.DevStackOptions, OS *ServeOpt
 	portFileName := filepath.Join(os.TempDir(), "bacalhau-devstack.port")
 	pidFileName := filepath.Join(os.TempDir(), "bacalhau-devstack.pid")
 
+	os.Remove(portFileName)
+	os.Remove(pidFileName)
+
 	if _, ignore := os.LookupEnv("IGNORE_PID_AND_PORT_FILES"); !ignore {
 		_, err := os.Stat(portFileName)
 		if err == nil {
